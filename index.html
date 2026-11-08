@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Photo Organizer</title>
+<style>
+:root{--bg:#fafafa;--panel:#fff;--ink:#171717;--mute:#737373;--line:#e5e5e5;--hover:#f5f5f5;--danger:#dc2626;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0a0a0a;--panel:#171717;--ink:#f5f5f5;--mute:#a3a3a3;--line:#292929;--hover:#1f1f1f;--danger:#f87171;color-scheme:dark}}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1024px;margin:0 auto;padding:32px 16px 64px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px}
+h1{margin:0;font-size:1.5rem;font-weight:600;letter-spacing:-.02em}
+.sub,.hint,.path,.m,.fname small{color:var(--mute)}
+.sub{margin:4px 0 0;font-size:.9rem}
+#stats{display:flex;gap:8px;flex-wrap:wrap}
+.chip{background:var(--hover);border-radius:6px;padding:4px 10px;font-size:.85rem;color:var(--mute)}.chip b{color:var(--ink)}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+#drop{margin-top:32px;border:1px dashed var(--line);border-radius:12px;padding:40px 24px;text-align:center;cursor:pointer;transition:background .15s}
+#drop:hover,#drop.over{background:var(--hover)}
+#drop p{margin:0}#drop .hint{margin-top:4px;font-size:.88rem}
+#prog{display:none;height:4px;max-width:280px;margin:16px auto 0;border-radius:4px;background:var(--line);overflow:hidden}
+#prog i{display:block;height:100%;width:0;background:var(--ink);transition:width .2s}
+.bar{margin-top:32px;padding-bottom:16px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.left,.right{display:flex;flex-wrap:wrap;align-items:center;gap:16px}.right{gap:8px}
+#tabs{display:inline-flex;background:var(--hover);padding:4px;border-radius:8px}
+#tabs button{border:0;background:none;padding:6px 12px;border-radius:6px;font-size:.88rem;font-weight:500;color:var(--mute)}
+#tabs button[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+#modes{display:inline-flex;gap:4px;font-size:.88rem}
+#modes button{border:0;background:none;padding:6px 10px;color:var(--mute)}
+#modes button[aria-pressed="true"]{color:var(--ink);font-weight:600;text-decoration:underline;text-underline-offset:8px}
+.btn{border:1px solid var(--line);background:none;border-radius:8px;padding:8px 14px;font-size:.88rem;font-weight:500;transition:background .15s}
+.btn:hover{background:var(--hover)}
+.btn.pri{background:var(--ink);color:var(--bg);border-color:var(--ink)}.btn.pri:hover{opacity:.8}
+.btn.dng{color:var(--danger)}
+.btn.ghost{border-color:transparent;color:var(--danger)}
+main{margin-top:24px}
+.folders{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
+.folder{text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;transition:border-color .15s}
+.folder:hover{border-color:var(--mute)}
+.collage{display:grid;grid-template-columns:1fr 1fr;gap:4px;aspect-ratio:4/3;border-radius:8px;overflow:hidden;background:var(--hover);margin-bottom:12px}
+.collage img,.collage span{width:100%;height:100%;object-fit:cover;display:block}
+.fname{font-weight:600}.fname small{font-weight:400;margin-left:4px}
+.path{font-size:.78rem;word-break:break-all}
+.crumb{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.ph{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px}
+.ph img,.ph .nt{width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;display:block;background:var(--hover)}
+.nt{display:grid;place-items:center;color:var(--mute);font-size:.78rem}
+.n,.m{margin:0;padding:0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.n{margin-top:6px;font-size:.8rem;font-weight:500}.m{font-size:.72rem}
+.x{position:absolute;top:12px;right:12px;width:26px;height:26px;border:0;border-radius:50%;background:rgba(23,23,23,.7);color:#fff;font-size:15px;line-height:1}
+.x:hover{background:var(--danger)}.x.dl{right:44px}.x.dl:hover{background:var(--ink);color:var(--bg)}
+.tag{position:absolute;top:14px;left:14px;padding:2px 8px;border-radius:999px;font-size:.7rem;font-weight:600;background:var(--ink);color:var(--bg)}
+.tag.rm{background:var(--danger);color:#fff}
+.dhead{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:12px}
+.dup{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.dup .photos{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+.dup .ph{background:var(--bg)}
+.hd{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.pick{cursor:pointer}
+.empty{padding:56px 20px;text-align:center;color:var(--mute);border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.empty b{display:block;color:var(--ink);font-size:1.05rem;margin-bottom:4px}
+#toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,24px);opacity:0;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:.88rem;transition:.25s;pointer-events:none;max-width:90vw}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:520px){.photos{grid-template-columns:1fr 1fr}.folders{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1>Photo Organizer</h1><p class="sub">Sort by date or camera. Find duplicates. All in your browser.</p></div>
+    <div id="stats"></div>
+  </header>
+
+  <div id="drop" tabindex="0" role="button" aria-label="Add photos">
+    <p><b>Drop photos here, or click to choose</b></p>
+    <p class="hint">Photos are kept on this device only, and nothing is uploaded.</p>
+    <div id="prog"><i></i></div>
+    <input type="file" id="file" accept="image/*" multiple hidden>
+  </div>
+
+  <div class="bar">
+    <div class="left">
+      <div id="tabs" role="group" aria-label="View">
+        <button data-tab="folders" aria-pressed="true">Folders</button>
+        <button data-tab="dups" aria-pressed="false">Duplicates</button>
+        <button data-tab="all" aria-pressed="false">All</button>
+      </div>
+      <div id="modes" role="group" aria-label="Sort by">
+        <button data-mode="month" aria-pressed="true">Month</button>
+        <button data-mode="day" aria-pressed="false">Day</button>
+        <button data-mode="camera" aria-pressed="false">Camera</button>
+      </div>
+    </div>
+    <div class="right">
+      <button class="btn pri" id="save">Download as folder</button>
+      <button class="btn" id="zip">Download as ZIP</button>
+      <button class="btn" id="csv">Export CSV</button>
+      <button class="btn ghost" id="clear">Clear</button>
+    </div>
+  </div>
+
+  <main id="view"></main>
+</div>
+<div id="toast" role="status"></div>
+<script>
+const KEY='photoorg:v1';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let S={items:[],mode:'month',tab:'folders',open:null};
+const files={}; // id -> File cache; originals live in IndexedDB
+let _db;const db=()=>_db||(_db=new Promise((res,rej)=>{const r=indexedDB.open('photoorg',1);r.onupgradeneeded=()=>r.result.createObjectStore('files');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}));
+async function idb(mode,fn){try{const d=await db();return await new Promise((res,rej)=>{const tx=d.transaction('files',mode),rq=fn(tx.objectStore('files'));tx.oncomplete=()=>res(rq&&rq.result);tx.onerror=()=>rej(tx.error)})}catch(e){return null}}
+const idbPut=(k,v)=>idb('readwrite',s=>s.put(v,k)),idbGet=k=>idb('readonly',s=>s.get(k)),idbDel=k=>idb('readwrite',s=>s.delete(k)),idbClear=()=>idb('readwrite',s=>s.clear());
+async function getFile(id){if(!files[id]){const f=await idbGet(id);if(f)files[id]=f}return files[id]||null}
+function dlBlob(b,name){const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+async function dlOne(id){const f=await getFile(id),it=S.items.find(i=>i.id===id);if(!f)return toast('The original file is not stored.');dlBlob(f,it?it.name:f.name)}
+/* store-only ZIP writer */
+const CT=(()=>{const t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc32(u){let c=-1;for(let i=0;i<u.length;i++)c=CT[(c^u[i])&255]^(c>>>8);return(c^-1)>>>0}
+function makeZip(list){
+  const parts=[],cen=[],enc=new TextEncoder();let off=0,cs=0;
+  for(const e of list){
+    const nm=enc.encode(e.name),d=e.data,crc=crc32(d),dt=e.date;
+    const time=(dt.getHours()<<11)|(dt.getMinutes()<<5)|(dt.getSeconds()>>1),date=((Math.max(dt.getFullYear(),1980)-1980)<<9)|((dt.getMonth()+1)<<5)|dt.getDate();
+    const l=new DataView(new ArrayBuffer(30));
+    l.setUint32(0,0x04034b50,true);l.setUint16(4,20,true);l.setUint16(6,0x0800,true);l.setUint16(10,time,true);l.setUint16(12,date,true);l.setUint32(14,crc,true);l.setUint32(18,d.length,true);l.setUint32(22,d.length,true);l.setUint16(26,nm.length,true);
+    parts.push(new Uint8Array(l.buffer),nm,d);
+    const c=new DataView(new ArrayBuffer(46));
+    c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint16(12,time,true);c.setUint16(14,date,true);c.setUint32(16,crc,true);c.setUint32(20,d.length,true);c.setUint32(24,d.length,true);c.setUint16(28,nm.length,true);c.setUint32(42,off,true);
+    cen.push(new Uint8Array(c.buffer),nm);off+=30+nm.length+d.length;cs+=46+nm.length;
+  }
+  const end=new DataView(new ArrayBuffer(22));
+  end.setUint32(0,0x06054b50,true);end.setUint16(8,list.length,true);end.setUint16(10,list.length,true);end.setUint32(12,cs,true);end.setUint32(16,off,true);
+  return new Blob([...parts,...cen,new Uint8Array(end.buffer)],{type:'application/zip'});
+}
+const topName=()=>'Photos by '+({month:'Month',day:'Day',camera:'Camera'}[S.mode]);
+function entryName(it,used){let n=folderOf(it).path+'/'+it.name;if(used.has(n))n=folderOf(it).path+'/'+it.id+'-'+it.name;used.add(n);return n}
+let keepFirst={}; // dup group signature -> preferred id
+
+/* ---------- storage ---------- */
+function load(){try{const r=localStorage.getItem(KEY);if(r){const d=JSON.parse(r);S.items=d.items||[];S.mode=d.mode||'month'}}catch(e){}}
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify({items:S.items,mode:S.mode}))}
+  catch(e){
+    try{localStorage.setItem(KEY,JSON.stringify({items:S.items.map(i=>({...i,thumb:''})),mode:S.mode}));toast('Storage full. Saved without thumbnails.')}
+    catch(e2){toast('Could not save to this browser.')}
+  }
+}
+let tt;function toast(m){const t=$('#toast');t.textContent=m;t.classList.remove('opacity-0','tranneutral-y-6');clearTimeout(tt);tt=setTimeout(()=>t.classList.add('opacity-0','tranneutral-y-6'),2800)}
+
+/* ---------- EXIF ---------- */
+function readExif(buf){
+  try{
+    const v=new DataView(buf);if(v.getUint16(0)!==0xFFD8)return{};
+    let o=2;
+    while(o<v.byteLength-4){
+      const m=v.getUint16(o),len=v.getUint16(o+2);
+      if(m===0xFFE1&&v.getUint32(o+4)===0x45786966)return tiff(v,o+10);
+      if((m&0xFF00)!==0xFF00)break;
+      o+=2+len;
+    }
+  }catch(e){}
+  return{};
+}
+function tiff(v,s){
+  const le=v.getUint16(s)===0x4949,g16=o=>v.getUint16(o,le),g32=o=>v.getUint32(o,le),out={};
+  const str=(o,n)=>{let r='';for(let i=0;i<n;i++){const c=v.getUint8(o+i);if(!c)break;r+=String.fromCharCode(c)}return r.trim()};
+  const ifd=off=>{
+    const n=g16(s+off);
+    for(let i=0;i<n;i++){
+      const e=s+off+2+i*12,tag=g16(e),cnt=g32(e+4),vo=cnt>4?s+g32(e+8):e+8;
+      if(tag===0x10F)out.make=str(vo,cnt);
+      else if(tag===0x110)out.model=str(vo,cnt);
+      else if(tag===0x9003)out.date=str(vo,cnt);
+      else if(tag===0x132)out.date2=str(vo,cnt);
+      else if(tag===0x8769)ifd(g32(e+8));
+    }
+  };
+  ifd(g32(s+4));return out;
+}
+function parseDate(s){
+  const m=/^(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/.exec(s||'');
+  if(!m||m[1]==='0000')return null;
+  return `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}`;
+}
+
+/* ---------- import ---------- */
+async function sha(buf){
+  try{const h=await crypto.subtle.digest('SHA-256',buf);return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('')}
+  catch(e){return 'sz'+buf.byteLength}
+}
+async function visuals(file){
+  try{
+    const bm=await createImageBitmap(file);
+    const c=document.createElement('canvas'),x=c.getContext('2d');
+    const sc=Math.min(1,180/Math.max(bm.width,bm.height));
+    c.width=Math.max(1,Math.round(bm.width*sc));c.height=Math.max(1,Math.round(bm.height*sc));
+    x.drawImage(bm,0,0,c.width,c.height);
+    const thumb=c.toDataURL('image/jpeg',.6);
+    const s=document.createElement('canvas');s.width=s.height=8;
+    const sx=s.getContext('2d');sx.drawImage(bm,0,0,8,8);
+    const d=sx.getImageData(0,0,8,8).data,g=[];
+    for(let i=0;i<64;i++)g.push(d[i*4]*.3+d[i*4+1]*.59+d[i*4+2]*.11);
+    const avg=g.reduce((a,b)=>a+b,0)/64;
+    const ah=g.map(v=>v>=avg?'1':'0').join('');
+    const res={thumb,ah,w:bm.width,h:bm.height};bm.close&&bm.close();return res;
+  }catch(e){return{thumb:'',ah:'',w:0,h:0}}
+}
+async function addFiles(list){
+  const arr=[...list].filter(f=>f.type.startsWith('image/')||/\.(heic|heif|jpe?g|png|webp|gif|tiff?)$/i.test(f.name));
+  if(!arr.length){toast('No image files found.');return}
+  const p=$('#prog'),bar=p.firstElementChild;p.style.display='block';
+  let added=0;
+  for(let i=0;i<arr.length;i++){
+    const f=arr[i];
+    try{
+      const head=await f.slice(0,131072).arrayBuffer();
+      const ex=readExif(head);
+      const full=await f.arrayBuffer();
+      const [hash,vis]=await Promise.all([sha(full),visuals(f)]);
+      let date=parseDate(ex.date)||parseDate(ex.date2),src='exif';
+      if(!date){src='file';const d=new Date(f.lastModified);const z=n=>String(n).padStart(2,'0');date=`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`}
+      let cam=[ex.make,ex.model].filter(Boolean).join(' ').replace(/\s+/g,' ');
+      if(ex.make&&ex.model&&ex.model.toLowerCase().startsWith(ex.make.toLowerCase()))cam=ex.model;
+      const id=Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+      files[id]=f;await idbPut(id,f);
+      S.items.push({id,name:f.name,size:f.size,date,src,cam,sha:hash,ah:vis.ah,thumb:vis.thumb,w:vis.w,h:vis.h});
+      added++;
+    }catch(e){}
+    bar.style.width=((i+1)/arr.length*100)+'%';
+    if(i%4===3)await new Promise(r=>setTimeout(r));
+  }
+  p.style.display='none';bar.style.width='0';
+  save();render();toast(`Added ${added} photo${added===1?'':'s'}.`);
+}
+
+/* ---------- grouping ---------- */
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function folderOf(it){
+  const d=it.date;
+  if(S.mode==='camera'){const c=it.cam||'Unknown camera';return{key:c,path:c.replace(/[\\/:*?"<>|]/g,'_')}}
+  if(S.mode==='day')return{key:d.slice(0,10),path:d.slice(0,4)+'/'+d.slice(0,10)};
+  const m=+d.slice(5,7);return{key:`${MONTHS[m-1]} ${d.slice(0,4)}`,path:d.slice(0,4)+'/'+d.slice(5,7)+' '+MONTHS[m-1]}
+}
+function folders(){
+  const map=new Map();
+  for(const it of S.items){const f=folderOf(it);if(!map.has(f.key))map.set(f.key,{key:f.key,path:f.path,items:[]});map.get(f.key).items.push(it)}
+  const arr=[...map.values()];
+  arr.forEach(f=>f.items.sort((a,b)=>a.date<b.date?-1:1));
+  if(S.mode==='camera')arr.sort((a,b)=>b.items.length-a.items.length);
+  else arr.sort((a,b)=>a.items[0].date<b.items[0].date?1:-1);
+  return arr;
+}
+
+/* ---------- duplicates ---------- */
+function ham(a,b){let n=0;for(let i=0;i<64;i++)if(a[i]!==b[i])n++;return n}
+function dupGroups(){
+  const it=S.items,p=it.map((_,i)=>i);
+  const find=i=>p[i]===i?i:(p[i]=find(p[i]));
+  const uni=(a,b)=>{p[find(a)]=find(b)};
+  for(let i=0;i<it.length;i++)for(let j=i+1;j<it.length;j++){
+    if(it[i].sha===it[j].sha||(it[i].ah&&it[j].ah&&ham(it[i].ah,it[j].ah)<=4&&Math.abs((it[i].w/it[i].h)-(it[j].w/it[j].h))<.05))uni(i,j);
+  }
+  const g={};it.forEach((x,i)=>(g[find(i)]=g[find(i)]||[]).push(x));
+  return Object.values(g).filter(a=>a.length>1).map(a=>{
+    a.sort((x,y)=>y.size-x.size);
+    const sig=a.map(x=>x.id).sort().join('');
+    const pref=keepFirst[sig];
+    if(pref){const k=a.findIndex(x=>x.id===pref);if(k>0)a.unshift(a.splice(k,1)[0])}
+    return{sig,items:a,exact:a.every(x=>x.sha===a[0].sha)};
+  });
+}
+
+/* ---------- render ---------- */
+const fmtSize=n=>n>1e6?(n/1e6).toFixed(1)+' MB':Math.round(n/1e3)+' KB';
+const fmtDate=d=>new Date(d).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
+function tile(it,tag=''){
+  return `<div class="ph">${tag}
+    ${it.thumb?`<img src="${it.thumb}" alt="${esc(it.name)}" loading="lazy">`:`<div class="nt">No preview</div>`}
+    <button class="x dl" data-act="dl" data-id="${it.id}" aria-label="Download ${esc(it.name)}">↓</button>
+    <button class="x" data-act="del" data-id="${it.id}" aria-label="Remove ${esc(it.name)}">×</button>
+    <p class="n" title="${esc(it.name)}">${esc(it.name)}</p>
+    <p class="m">${fmtDate(it.date)} · ${fmtSize(it.size)}</p>
+    <p class="m">${esc(it.cam||'Unknown camera')}</p></div>`;
+}
+const empty=(t,s)=>`<div class="empty"><b>${t}</b>${s}</div>`;
+function render(){
+  const n=S.items.length,dg=dupGroups(),extras=dg.reduce((a,g)=>a+g.items.length-1,0),fl=folders();
+  const chip=(b,t)=>`<span class="chip"><b>${b}</b> ${t}</span>`;
+  $('#stats').innerHTML=chip(n,'photos')+chip(fl.length,'folders')+chip(extras,'duplicates');
+  document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tab===S.tab));
+  document.querySelectorAll('#modes button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===S.mode));
+  $('#modes').style.display=S.tab==='folders'?'':'none';
+  let h='';
+  if(!n)h=empty('No photos yet','Add a few photos above to see them sorted into folders.');
+  else if(S.tab==='folders'){
+    const open=S.open&&fl.find(f=>f.key===S.open);
+    if(open){
+      h=`<div class="crumb"><button class="btn" data-act="back">Back</button><div><div class="fname">${esc(open.key)} <small>${open.items.length} photos</small></div><div class="path">${esc(open.path)}/</div></div></div><div class="photos">${open.items.map(i=>tile(i)).join('')}</div>`;
+    }else{
+      S.open=null;
+      h=`<div class="folders">${fl.map(f=>`<button class="folder" data-act="open" data-key="${esc(f.key)}"><div class="collage">${[0,1,2,3].map(k=>f.items[k]&&f.items[k].thumb?`<img src="${f.items[k].thumb}" alt="">`:'<span></span>').join('')}</div><div class="fname">${esc(f.key)} <small>${f.items.length}</small></div><div class="path">${esc(f.path)}/</div></button>`).join('')}</div>`;
+    }
+  }else if(S.tab==='dups'){
+    if(!dg.length)h=empty('No duplicates found','Exact copies and near-identical shots show up here.');
+    else h=`<div class="dhead"><button class="btn pri" data-act="cleanall">Remove all ${extras} extras</button><span class="hint">Click a photo to choose which one to keep. The largest file is kept by default.</span></div>`+
+      dg.map((g,gi)=>`<section class="dup"><div class="hd"><div><b>${g.exact?'Exact copies':'Look-alikes'}</b> <span class="hint">${g.items.length} photos</span></div><button class="btn dng" data-act="cleangroup" data-g="${gi}">Remove ${g.items.length-1} extra${g.items.length>2?'s':''}</button></div><div class="photos">${g.items.map((i,k)=>`<div class="pick" data-act="keep" data-g="${gi}" data-id="${i.id}">${tile(i,k===0?'<span class="tag">Keep</span>':'<span class="tag rm">Remove</span>')}</div>`).join('')}</div></section>`).join('');
+    window._dg=dg;
+  }else{
+    h=`<div class="photos">${[...S.items].sort((a,b)=>a.date<b.date?1:-1).map(i=>tile(i)).join('')}</div>`;
+  }
+  $('#view').innerHTML=h;
+}
+
+/* ---------- actions ---------- */
+function del(ids){const s=new Set(ids);S.items=S.items.filter(i=>!s.has(i.id));ids.forEach(i=>{delete files[i];idbDel(i)});save();render()}
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-act]');if(!t)return;
+  const a=t.dataset.act;
+  if(a==='dl'){e.stopPropagation();dlOne(t.dataset.id)}else if(a==='del'){e.stopPropagation();del([t.dataset.id])}
+  else if(a==='open'){S.open=t.dataset.key;render();window.scrollTo({top:0,behavior:'smooth'})}
+  else if(a==='back'){S.open=null;render()}
+  else if(a==='keep'){const g=window._dg[+t.dataset.g];keepFirst[g.sig]=t.dataset.id;render()}
+  else if(a==='cleangroup'){const g=window._dg[+t.dataset.g];del(g.items.slice(1).map(i=>i.id));toast('Removed extras from the list.')}
+  else if(a==='cleanall'){const ids=window._dg.flatMap(g=>g.items.slice(1).map(i=>i.id));del(ids);toast(`Removed ${ids.length} duplicates from the list.`)}
+});
+$('#tabs').onclick=e=>{const b=e.target.closest('button');if(b){S.tab=b.dataset.tab;S.open=null;render()}};
+$('#modes').onclick=e=>{const b=e.target.closest('button');if(b){S.mode=b.dataset.mode;S.open=null;save();render()}};
+$('#clear').onclick=()=>{if(S.items.length&&confirm('Remove all photos from this organizer? Your original files on disk are not touched.')){S.items=[];for(const k in files)delete files[k];idbClear();save();render()}};
+$('#csv').onclick=()=>{
+  if(!S.items.length)return toast('Add photos first.');
+  const rows=[['name','date','date_source','camera','size_bytes','folder']].concat(S.items.map(i=>[i.name,i.date,i.src,i.cam,i.size,folderOf(i).path+'/']));
+  const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='photo-plan.csv';a.click();
+};
+$('#save').onclick=async()=>{
+  if(!S.items.length)return toast('Add photos first.');
+  if(!window.showDirectoryPicker){toast('This browser cannot create folders. Downloading a ZIP instead.');return $('#zip').click()}
+  try{
+    const base=await showDirectoryPicker({mode:'readwrite'});
+    const root=await base.getDirectoryHandle(topName(),{create:true});
+    const used=new Set();let n=0;
+    for(const it of S.items){
+      const f=await getFile(it.id);if(!f)continue;
+      const parts=entryName(it,used).split('/'),name=parts.pop();
+      let dir=root;for(const part of parts)dir=await dir.getDirectoryHandle(part,{create:true});
+      const w=await (await dir.getFileHandle(name,{create:true})).createWritable();
+      await w.write(f);await w.close();n++;
+    }
+    toast(`Saved ${n} photo${n===1?'':'s'} in the folder “${topName()}”.`);
+  }catch(e){if(e.name!=='AbortError')toast('Could not write to that folder.')}
+};
+$('#zip').onclick=async()=>{
+  if(!S.items.length)return toast('Add photos first.');
+  toast('Building ZIP…');
+  const used=new Set(),list=[];
+  for(const it of S.items){const f=await getFile(it.id);if(!f)continue;list.push({name:topName()+'/'+entryName(it,used),data:new Uint8Array(await f.arrayBuffer()),date:new Date(it.date)})}
+  if(!list.length)return toast('No original files are stored yet.');
+  dlBlob(makeZip(list),'photos-by-'+S.mode+'.zip');
+  toast(`ZIP ready with ${list.length} photo${list.length===1?'':'s'}.`);
+};
+const drop=$('#drop'),inp=$('#file');
+drop.onclick=()=>inp.click();
+drop.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();inp.click()}};
+inp.onchange=()=>{addFiles(inp.files);inp.value=''};
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over')}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over')}));
+drop.addEventListener('drop',e=>addFiles(e.dataTransfer.files));
+
+load();render();
+
+</script>
+</body>
+</html>
